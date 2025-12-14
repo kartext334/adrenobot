@@ -1,55 +1,30 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({
+const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).end();
+    return res.status(405).json({ message: "Method not allowed" });
   }
 
   try {
-    const {
-      promptContent,
-      systemContent,
-      previousChat
-    } = req.body;
+    const { message } = req.body;
 
-    const messages = [];
-
-    if (systemContent) {
-      messages.push({
-        role: "system",
-        content: systemContent,
-      });
-    }
-
-    if (previousChat) {
-      messages.push({
-        role: "assistant",
-        content: previousChat,
-      });
-    }
-
-    messages.push({
-      role: "user",
-      content: promptContent,
-    });
-
-    const completion = await openai.chat.completions.create({
+    const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: messages,
+      messages: [
+        { role: "system", content: "Sen yardımcı bir asistansın." },
+        { role: "user", content: message },
+      ],
     });
 
     res.status(200).json({
-      reply: completion.choices[0].message.content,
+      message: completion.choices[0].message.content,
     });
-
-  } catch (error) {
-    console.error("OpenAI Error:", error);
-    res.status(500).json({
-      error: "AI yanıt üretilemedi",
-    });
+   } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "AI error" });
   }
 }
