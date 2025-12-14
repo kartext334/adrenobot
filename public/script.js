@@ -1,99 +1,101 @@
-const chatBody = document.getElementById('chat-body');
-const userInput = document.getElementById('user-input');
-const sendButton = document.getElementById('send-button');
+const chatBody = document.getElementById("chat-body");
+const userInput = document.getElementById("user-input");
+const sendButton = document.getElementById("send-button");
 
-let isChatbotTyping = false;
-let typingIntervalId = null;
-let typingIndicatorMessage = 'Typing';
+let isTyping = false;
+let typingInterval = null;
 
-function displayUserMessage(message) {
-    const userMessage = document.createElement('div');
-    userMessage.className = 'user-message';
-    userMessage.innerText = message;
-    chatBody.appendChild(userMessage);
-    chatBody.scrollTop = chatBody.scrollHeight;
+
+
+function addUserMessage(text) {
+  const div = document.createElement("div");
+  div.className = "user-message";
+  div.innerText = text;
+  chatBody.appendChild(div);
+  chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-function displayChatbotMessage(message) {
-    if (isChatbotTyping) {
-        clearInterval(typingIntervalId);
-        const typingIndicator = chatBody.querySelector('.typing-indicator');
-        if (typingIndicator) {
-            chatBody.removeChild(typingIndicator);
-        }
-        isChatbotTyping = false;
-        typingIndicatorMessage = 'Typing';
-    }
-
-    const chatbotMessage = document.createElement('div');
-    chatbotMessage.className = 'chatbot-message';
-    chatbotMessage.innerText = message;
-    chatBody.appendChild(chatbotMessage);
-    chatBody.scrollTop = chatBody.scrollHeight;
+function addBotMessage(text) {
+  removeTyping();
+  const div = document.createElement("div");
+  div.className = "chatbot-message";
+  div.innerText = text;
+  chatBody.appendChild(div);
+  chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-function displayTypingIndicator() {
-    if (!isChatbotTyping) {
-        const typingIndicator = document.createElement('div');
-        typingIndicator.className = 'chatbot-message typing-indicator';
-        typingIndicator.innerText = typingIndicatorMessage;
-        chatBody.appendChild(typingIndicator);
-        chatBody.scrollTop = chatBody.scrollHeight;
-        isChatbotTyping = true;
 
-        typingIntervalId = setInterval(() => {
-            if (typingIndicatorMessage === 'Typing...') {
-                typingIndicatorMessage = 'Typing';
-            } else {
-                typingIndicatorMessage += '.';
-            }
-            typingIndicator.innerText = typingIndicatorMessage;
-        }, 400);
-    }
+
+function showTyping() {
+  if (isTyping) return;
+
+  const div = document.createElement("div");
+  div.className = "chatbot-message typing-indicator";
+  div.innerText = "Typing";
+  chatBody.appendChild(div);
+
+  isTyping = true;
+  let dots = 0;
+
+  typingInterval = setInterval(() => {
+    dots = (dots + 1) % 4;
+    div.innerText = "Typing" + ".".repeat(dots);
+  }, 400);
 }
+
+function removeTyping() {
+  if (!isTyping) return;
+
+  clearInterval(typingInterval);
+  const el = document.querySelector(".typing-indicator");
+  if (el) el.remove();
+  isTyping = false;
+}
+
+
 
 async function sendMessage() {
-    const message = userInput.value.trim();
-    if (message === '') return;
+  const text = userInput.value.trim();
+  if (!text) return;
 
-    displayUserMessage(message);
-    userInput.value = '';
+  addUserMessage(text);
+  userInput.value = "";
 
-    try {
-        displayTypingIndicator();
+  try {
+    showTyping();
 
-        const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                promptContent: message,
-                systemContent: "Sen profesyonel bir müşteri destek chatbotusun.",
-                previousChat: ""
-            }),
-        });
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: String(text) 
+      }),
+    });
 
-        if (!response.ok) {
-            throw new Error('API isteği başarısız');
-        }
+    const data = await res.json();
 
-        const data = await response.json();
-        displayChatbotMessage(data.reply);
-
-    } catch (error) {
-        console.error('Error:', error);
-        displayChatbotMessage("Üzgünüm, şu anda yanıt veremiyorum.");
+    if (!res.ok) {
+      throw new Error(data.message || "API error");
     }
+
+    addBotMessage(data.message);
+  } catch (err) {
+    console.error(err);
+    addBotMessage("Üzgünüm, şu anda yanıt veremiyorum.");
+  }
 }
 
-sendButton.addEventListener('click', sendMessage);
 
-userInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-        event.preventDefault();
-        sendMessage();
-    }
+
+sendButton.addEventListener("click", sendMessage);
+
+userInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    sendMessage();
+  }
 });
 
-displayChatbotMessage("Merhaba, ben AdrenoBot 🤖 Size nasıl yardımcı olabilirim?");
+
+
+addBotMessage("Merhaba 👋 Ben AdrenoBot. Size nasıl yardımcı olabilirim?");
